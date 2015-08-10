@@ -1,11 +1,9 @@
 ﻿#!/usr/bin/env python
 
 import time
-import hashlib
 import sys
-from ordered_set import OrderedSet
 
-#uncomment for logging
+#uncomment for logging to file
 #sys.stdout = open("log.txt",'w')
 
 def removeDuplicates(lines): 
@@ -45,5 +43,5 @@ def readAndMerge(files):
     #merged.close()
     print "done. total Time: {:f}".format(time.clock()-timestart)
 
-files = ["C2014~1.PB","C2014~2.PB"]
+files = ["2014\C2014~1.PB","2014\C2014~2.PB"]
 readAndMerge(files)
