@@ -2,6 +2,7 @@
 import hashlib
 import threading
 import glob as gl
+import sys
 import os
 from os.path import join
 import time
@@ -15,7 +16,7 @@ def getFileHash(file):
 
 def mergeWorkerThread(folder):
     hashes = {}
-    seen = {}
+    seenLines = {}
     result = []
     dupl = 0
     lineCount = 0
@@ -52,11 +53,9 @@ def mergeScheduler(maxThreads=5):
             threads.append(t.getName())
             t.start()
                        
-    
-
 logging.basicConfig(filename = "merge_{:d}.log".format(int(time.time())),level = logging.INFO)
 threads = []
 folders = []
 mergeScheduler()
-
+sys.exit()
 
