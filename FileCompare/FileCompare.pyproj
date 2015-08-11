@@ -5,7 +5,7 @@
     <SchemaVersion>2.0</SchemaVersion>
     <ProjectGuid>5877c8f3-7da3-434a-abbf-3138c136bffb</ProjectGuid>
     <ProjectHome>.</ProjectHome>
-    <StartupFile>globtest.py</StartupFile>
+    <StartupFile>protoBufMerger.py</StartupFile>
     <SearchPath>
     </SearchPath>
     <WorkingDirectory>.</WorkingDirectory>
@@ -23,20 +23,6 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="protoBufMerger.py">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="globtest.py">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="EPICSEvent_pb2.py" />
-    <Compile Include="FileCompare.py" />
-    <Compile Include="module1.py">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="testStructBestPerf.py">
-      <SubType>Code</SubType>
-    </Compile>
-    <Compile Include="printpbrdouble.py">
       <SubType>Code</SubType>
     </Compile>
   </ItemGroup>

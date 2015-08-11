@@ -1,45 +1,62 @@
-﻿import threading
+﻿import logging
+import hashlib
+import threading
+import glob as gl
+import os
+from os.path import join
+import time
+
+def getFileHash(file):
+    m = hashlib.md5()
+    for line in file:
+        m.update(line.strip())
+    file.seek(0)    
+    return m.hexdigest()
 
 def mergeWorkerThread(folder):
-    files = []
-    inputLines = []
-    merged = open(join(folder,"{:s}_merged.PB".format(folder)),"wb")
+    hashes = {}
     seen = {}
     result = []
     dupl = 0
-    cnt = 0
-    for item in lines:
-        if item in seen: 
-            dupl+=1
-            continue
-        seen[item] = 1
-        result.append(item)
-        cnt += 1
-    merged.writelines(result)
-    print("processed {:d} records with {:d} duplicates.".format(cnt,dupl))
-    merged.close()
+    lineCount = 0
+    begin = time.clock()
+    logging.info("[{:s}]Starting merge for {:s}.".format(time.asctime(), folder)) 
+    with open(join(folder,"{:s}_merged.PB".format(folder)),"wb") as merged:
+        for file in gl.glob(join(folder,"*.pb")):
+            with open(file, "rb") as f:
+                hash = getFileHash(f)
+                if hash in hashes:
+                    logging.info("{:s} is an exact duplicate of {:s}. skipping line-by-line checks and removing...".format(file, hashes.get(hash)))
+                    dupl += len(f.readlines())
+                    f.close()
+                    os.remove(file)
+                    continue
+                hashes[hash] = file
+                for line in f:
+                    lineCount += 1
+                    if line in seen: 
+                        dupl+=1
+                        continue
+                    seen[line] = 1
+                    result.append(line)                    
+        merged.writelines(result)
+    logging.info("[{:s}] merged files for {:s}.operation took {:f} seconds. {:d} records with {:d} duplicate(s).".format(time.asctime(),folder,time.clock()-begin,lineCount,dupl))
+    threads.remove(threading.currentThread().getName())
         
-
-
-def mergeScheduler(maxThreads=5):    
-    folders = []
+def mergeScheduler(maxThreads=5):       
     for folder in gl.glob("20*"):
         folders.append(folder)
-    lines = []
-    while folders:          
-        #TODO: start a new thread for each folder
-
-        #for pb in gl.glob(join(folder,"*.pb")):
-        #    filesToMerge.append(pb)   
-        #while(filesToMerge):
-            #with open(f,"rb") as inFile:
-            #    lines.extend(inFile.readlines())
-            #    inFile.close()                      
-            if runningThreads <= maxThreads:
-                t = (threading.Thread(target=mergeWorkerThread,args=(folder,f)))
-
-threads = []
-output.writelines(removeDuplicates(lines))
-output.close()
+    while folders:        
+        if (len(threads) < maxThreads):
+            t = threading.Thread(target=mergeWorkerThread,args=(folders.pop(),))
+            threads.append(t.getName())
+            t.start()
+                       
     
+
+logging.basicConfig(filename = "merge_{:d}.log".format(int(time.time())),level = logging.INFO)
+threads = []
+folders = []
+mergeScheduler()
+
 
