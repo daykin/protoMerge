@@ -22,6 +22,9 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="EPICSEvent_pb2.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="protoBufMerger.py">
       <SubType>Code</SubType>
     </Compile>
