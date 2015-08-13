@@ -1,65 +1,87 @@
 ﻿import logging
 import hashlib
 import threading
-import glob as gl
 import sys
-from pandas import DataFrame
-import os
+import os, shutil
 from os.path import join
 import time
+import argparse
 
-def getFileHash(file): #return the hash of an entire file.
+def getFileHash(file):                  #return the hash of an entire file.
     m = hashlib.md5()
     for line in file:
         m.update(line.strip())
     file.seek(0)    
     return m.hexdigest()
 
-def mergeWorkerThread(folder): #thread to merge all PBs in a given folder
-    hashes = {} 
+def mergeOperationThread(files, mergeFile):    
     seen = {}
     result = []
     dupl = 0
     lineCount = 0
     begin = time.clock()
-    logging.info("[{:s}] Starting merge for {:s}.".format(time.asctime(), folder)) 
-    with open(join(folder,"{:s}_merged.PB".format(folder)),"wb") as merged:  #open an output file
-        for file in gl.glob(join(folder,"*.pb")):
-            with open(file, "rb") as f:
-                hash = getFileHash(f) 
-                if hash in hashes: #see if we already looked at an exact duplicate.
-                    logging.info("[{:s}] {:s} is an exact duplicate of {:s}. skipping line-by-line checks and removing...".format(time.asctime(),file, hashes.get(hash)))
-                    lncount= len(f.readlines())
-                    dupl+= duplncount
-                    lineCount += duplncount
-                    f.close()
-                    os.remove(file)
+    for f in files:
+        with open(f,"rb") as input, open(mergeFile,"w+b") as merge:
+            inHash = getFileHash(input)
+            if hash in fileHashes:      #see if we already looked at an exact duplicate.
+                logging.info("[{:s}] {:s} is an exact duplicate of {:s}. skipping line-by-line checks and removing...".format(time.asctime(),file, hashes.get(hash)))
+                lncount= len(f.readlines())
+                dupl+= lncount
+                f.close()
+                os.remove(file)
+                continue
+            fileHashes.add(inHash)
+            for line in input:      #check line-by-line. add uniques to a dict for speedy lookup
+                lineCount += 1
+                if line in seen: 
+                    dupl+=1
                     continue
-                hashes[hash] = file  #if not, record the unique
-                for line in f:       #check line-by-line. add uniques to a dict for speedy lookup
-                    lineCount += 1
-                    if line in seen: 
-                        dupl+=1
-                        continue
-                    seen[line] = 1 #add entry to dict
-                    result.append(line) #add the unique to a list to retain order    
-        print "beginning write."               
-        merged.writelines(result)
-    logging.info("[{:s}] Merged files for {:s}. Operation took {:f} seconds. {:d} records processed with {:d} duplicate(s).".format(time.asctime(),folder,time.clock()-begin,lineCount,dupl))
-    threads.remove(threading.currentThread().getName())
-        
-def mergeScheduler(maxThreads=5):       
-    begin = time.clock()
-    for folder in gl.glob("20*"):
-        folders.append(folder)
-    while folders:        
-        if (len(threads) < maxThreads):
-            t = threading.Thread(target=mergeWorkerThread,args=(folders.pop(),))
+                seen[line] = 1      #add entry to dict
+                result.append(line) #add the unique to a list to retain order              
+            merge.writelines(result)
+    logging.info("[{:s}] completed merge for {:s} in {:f} seconds. found {:d} duplicate lines.".format(time.asctime(),f,time.clock()-begin,dupl))
+    threads.remove(threading.currentThread().getName())      
+
+def mergeOperationScheduler(subfolder1, subfolder2, maxThreads=5):          #thread to merge all PBs in a given folder
+    files1 = set(file for file in os.listdir(subfolder1))
+    files2 = set(file for file in os.listdir(subfolder2))
+    basename = os.path.basename(subfolder1)                                 #Master already made sure this exists in both subfolders 
+    toMerge = files1.intersection(files2)
+    singles = files1.union(files2).difference(toMerge)
+    if singles:
+       shutil.copy((file for file in singles),join(args.mergeFolder,basename))
+       logging.info("one or more files in {:s} was not mirrored. file(s) copied to merge directory.")             
+    while toMerge:
+        file = toMerge.pop()
+        mergedir = join(args.mergefolder,basename)
+        if not os.path.exists(mergedir):
+            os.makedirs(mergedir)           
+        if (len(threads) < maxThreads): 
+            t = threading.Thread(target=mergeOperationThread, args = ([join(subfolder1,file),join(subfolder2,file)],join(mergedir,file)))  
             threads.append(t.getName())
             t.start()
-    logging.info("done in {:f} seconds.".format(time.clock()-begin))
+
+ 
+def mergeMaster(folder1, folder2):        
+    subdirs1 = set(subdir for subdir in os.listdir(folder1))
+    subdirs2 = set(subdir for subdir in os.listdir(folder2))
+    common = subdirs1.intersection(subdirs2)                    
+    singles = subdirs1.union(subdirs2).difference(common)   #subdirs that exist in 1 xor 2
+    for subdir in singles:                                  #take care of the singles
+        logging.info("{:s} is not mirrored. copying to merged.".format(subdir))
+        shutil.copy(subdir, args.mergefolder)
+    for subdir in common:                                   #merge the mirrored files
+        mergeOperationScheduler(join(folder1,subdir),join(folder2,subdir),args.maxthreads)
+
+parser = argparse.ArgumentParser()
+parser.add_argument("--maxthreads", help = "maximum allowed parallel threads", type = int)
+parser.add_argument("--folder1", help = "first input directory")
+parser.add_argument("--folder2", help = "second input directory")
+parser.add_argument("--mergefolder", help = "where to place the output")
+args = parser.parse_args()
                        
 logging.basicConfig(filename = "merge_{:d}.log".format(int(time.time())),level = logging.INFO)
+
+fileHashes = set()
 threads = []
-folders = []
-mergeScheduler()
+mergeMaster(args.folder1,args.folder2)
