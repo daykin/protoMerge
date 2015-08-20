@@ -21,9 +21,9 @@ def mergeOperationThread(files, mergeFile):
     lineCount = 0
     begin = time.clock()
     for f in files:
-        with open(f,"rb") as input, open(mergeFile,"w+b") as merge:
+        with open(f,"rb") as input, open(mergeFile,args.mergemode+"+b") as merge:
             inHash = getFileHash(input)
-            if hash in fileHashes:      #see if we already looked at an exact duplicate.
+            if inHash in fileHashes:      #see if we already looked at an exact duplicate.
                 logging.info("[{:s}] {:s} is an exact duplicate of {:s}. skipping line-by-line checks and removing...".format(time.asctime(),file, hashes.get(hash)))
                 lncount= len(f.readlines())
                 dupl+= lncount
@@ -78,10 +78,14 @@ parser.add_argument("--maxthreads", help = "maximum allowed parallel threads", t
 parser.add_argument("--folder1", help = "first input directory")
 parser.add_argument("--folder2", help = "second input directory")
 parser.add_argument("--mergefolder", help = "where to place the output")
+parser.add_argument("--mergemode", help = "append or overwrite to merge file. accepts w (write), a (append)")
 args = parser.parse_args()
                        
 logging.basicConfig(filename = "merge_{:d}.log".format(int(time.time())),level = logging.INFO)
 
-fileHashes = set()
-threads = []
-mergeMaster(args.folder1,args.folder2)
+if(args.mergemode == "w" or args.mergemode == "a"):
+    fileHashes = set()
+    threads = []
+    mergeMaster(args.folder1,args.folder2)
+else:
+    print "invalid mode for merge file."
