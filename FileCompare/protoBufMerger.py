@@ -1,4 +1,4 @@
-﻿import logging
+import logging
 import hashlib
 import threading
 import sys
@@ -69,7 +69,11 @@ def mergeMaster(folder1, folder2):
     singles = subdirs1.union(subdirs2).difference(common)   #subdirs that exist in 1 xor 2
     for subdir in singles:                                  #take care of the singles
         logging.info("{:s} is not mirrored. copying to merged.".format(subdir))
-        shutil.copy(subdir, args.mergefolder)
+        try:
+            shutil.copy(subdir, args.mergefolder)
+        except Exception, e:
+            logging.warning(e)
+            pass
     for subdir in common:                                   #merge the mirrored files
         mergeOperationScheduler(join(folder1,subdir),join(folder2,subdir),args.maxthreads)
 
