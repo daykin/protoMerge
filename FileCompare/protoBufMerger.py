@@ -4,6 +4,7 @@ import threading
 import sys
 import os, shutil
 from os.path import join
+from os.path import basename as base
 import time
 import argparse
 
@@ -12,7 +13,6 @@ def getFileHash(f):                  #return the hash of an entire file.
     for line in f:
         m.update(line.strip())
     f.seek(0)
-    print(m.hexdigest())
     return m.hexdigest()
 
 def mergeOperationThread(files, mergeFile):    
@@ -21,6 +21,7 @@ def mergeOperationThread(files, mergeFile):
     dupl = 0
     lineCount = 0
     begin = time.clock()
+    print "files:", files
     with open(mergeFile,args.mergemode+"+b") as merge:
         for f in files:
             with open(f,"rb") as infile:
@@ -43,20 +44,26 @@ def mergeOperationThread(files, mergeFile):
                         continue
                     seen[line] = 1      #add entry to dict
                     result.append(line) #add the unique to a list to retain order              
+                print("writing lines for {:s}").format(filename)
                 merge.writelines(result)
     logging.info("[{:s}] completed merge for {:s} in {:f} seconds. found {:d} duplicate lines.".format(time.asctime(),f,time.clock()-begin,dupl))
     threads.remove(threading.currentThread().getName())      
 
 def mergeOperationScheduler(subfolder1, subfolder2, maxThreads=5):          #thread to merge all PBs in a given folder
-    files1 = set(filename for filename in os.listdir(subfolder1))
-    files2 = set(filename for filename in os.listdir(subfolder2))
+    files1 = set(base(filename) for filename in os.listdir(subfolder1))
+    files2 = set(base(filename) for filename in os.listdir(subfolder2))
+    print files1, files2
     basename = os.path.basename(subfolder1)                                 #Master already made sure this exists in both subfolders 
     #basename2 = os.path.basename(subfolder2)
     toMerge = files1.intersection(files2)
     singles = files1.union(files2).difference(toMerge)
     if singles:
         for filename in singles:
-            shutil.copy(filename,join(args.mergefolder,basename))
+            if filename in subfolder1:
+                shutil.copy(join(subfolder1,filename),join(args.mergefolder,basename))    
+            else:
+                shutil.copy(join(subfolder2,filename),join(args.mergefolder,basename))
+            print "filename: {:s}".format(filename)
             logging.info("{:s} is not mirrored. file copied to merge directory.".format(filename))             
     while toMerge:
         file = toMerge.pop()
@@ -71,7 +78,7 @@ def mergeOperationScheduler(subfolder1, subfolder2, maxThreads=5):          #thr
 
 def mergeMaster(folder1 = os.path.join(os.getcwd(),"appl0"), folder2 = os.path.join(os.getcwd(),"appl1")):        
     subdirs1 = set(os.path.join(folder1,subdir) for subdir in os.listdir(folder1))
-    subdirs2 = set(os.path.join(folder1,subdir) for subdir in os.listdir(folder2))
+    subdirs2 = set(os.path.join(folder2,subdir) for subdir in os.listdir(folder2))
     common = subdirs1.intersection(subdirs2)                    
     singles = subdirs1.union(subdirs2).difference(common)   #subdirs that exist in 1 xor 2
     for subdir in singles:                                  #take care of the singles
@@ -97,5 +104,5 @@ if not(args.mergemode == "w" or args.mergemode == "a"):
     args.mergemode = "w"
 fileHashes = {}
 threads = []
-mergeMaster(args.folder1,args.folder2)
-
+mergeOperationScheduler(args.folder1,args.folder2,args.maxthreads)
+#mergeMaster(args.folder1,args.folder2)
