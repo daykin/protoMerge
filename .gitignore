@@ -1,0 +1,5 @@
+/FileCompare/*.pb
+/FileCompare/*.PB
+.vs
+/FileCompare.sln
+/FileCompare.v12.suo
