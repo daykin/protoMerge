@@ -4,7 +4,6 @@ import threading
 import sys
 import os, shutil, errno
 import glob
-#from glob import iglob
 from os.path import join
 import time
 import argparse
@@ -31,6 +30,10 @@ def getRelativeParents(f):
         return f[0:backIdx+1]
     elif not(fwdIdx == -1):
         return f[0:fwdIdx+1]
+    elif not(backIdx == -1 or backIdx == -1):
+        raise NameError("found malformed filename {:s}. contains forward and back slashes.".format(f))
+    else:
+        return f
 
 def enumerate_files(directory):
     paths = []
@@ -93,16 +96,6 @@ def mergeOperationScheduler(folder1, folder2, maxThreads=5):          #thread to
             threads.append(t.getName())
             t.start()
  
-#def mergeMaster(folder1, folder2):        
-#    subdirs1 = set(subdir for subdir in os.listdir(folder1))
-#    subdirs2 = set(subdir for subdir in os.listdir(folder2))
-#    common = subdirs1.intersection(subdirs2)                    
-#    singles = subdirs1.union(subdirs2).difference(common)   #subdirs that exist in 1 xor 2
-#    for subdir in singles:                                  #take care of the singles
-#        logging.info("{:s} is not mirrored. copying to merged.".format(subdir))
-#        shutil.copy(subdir, args.mergefolder)
-#    for subdir in common:                                   #merge the mirrored files
-#        mergeOperationScheduler(join(folder1,subdir),join(folder2,subdir),args.maxthreads)
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--maxthreads", help = "maximum allowed parallel threads", type = int)
