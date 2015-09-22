@@ -15,7 +15,7 @@ def getFileHash(file):                  	#return the hash of an entire file.
     file.seek(0)    
     return m.hexdigest()
 
-def mkdir_p(path):
+def mkdir_p(path):                          #makes the proper directory structure for merging.
     try:
         os.makedirs(path)
     except OSError as exc:                  #EAFP
@@ -23,7 +23,7 @@ def mkdir_p(path):
             pass
         else: raise
 
-def getRelativeParents(f):
+def getRelativeParents(f):                  #returns the relative path to supplied container folder, /srv/lts/double/counter becomes double/counter
     backIdx = f.rfind("\\")
     fwdIdx = f.rfind ("/")
     if not(backIdx == -1):
@@ -40,8 +40,9 @@ def enumerate_files(directory):
 
     for root, directories, files in os.walk(directory):
         for filename in files:
-            filepath = os.path.join(root.replace(directory,''), filename)
-            paths.append(filepath)
+            if not(filename.lower().find(".pb")==-1):    #ensure we're only meddling with pb files
+                filepath = os.path.join(root.replace(directory,''), filename)
+                paths.append(filepath)
     return paths
 
 def mergeOperationThread(files, mergeFile):    
@@ -72,12 +73,11 @@ def mergeOperationThread(files, mergeFile):
     logging.info("[{:s}] completed merge for {:s} in {:f} seconds. found {:d} duplicate lines.".format(time.asctime(),f,time.clock()-begin,dupl))
     threads.remove(threading.currentThread().getName())      
 
-def mergeOperationScheduler(folder1, folder2, maxThreads=5):          #thread to merge all PBs in a given folder
+def mergeOperationScheduler(folder1, folder2, maxThreads=5):
     files1 = set(enumerate_files(folder1))
     files2 = set(enumerate_files(folder2))
     toMerge = files1.intersection(files2)
     singles = files1.union(files2).difference(toMerge)
-    print(toMerge)
     if singles:
        for f in singles:
            mkdir_p(args.mergefolder+(getRelativeParents(f)))
